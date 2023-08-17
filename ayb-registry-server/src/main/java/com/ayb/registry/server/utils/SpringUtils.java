@@ -35,9 +35,9 @@ public class SpringUtils implements ApplicationContextInitializer<ConfigurableAp
         return null;
     }
 
-    public static boolean getStandaloneMode() {
+    public static boolean isStandaloneMode() {
         //TODO true单机 false集群
-        return false;
+        return true;
     }
 
     public static <T> T getBean(Class<T> beanType) {

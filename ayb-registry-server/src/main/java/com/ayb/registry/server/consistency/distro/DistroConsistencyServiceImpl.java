@@ -50,6 +50,11 @@ public class DistroConsistencyServiceImpl implements ConsistencyService, DistroD
     }
 
     @Override
+    public List<Instance> get(String key) {
+        return dataStore.get(key);
+    }
+
+    @Override
     public void listen(String key, RecordListener listener) {
         if (!listeners.containsKey(key)) {
             listeners.put(key, listener);
@@ -105,7 +110,7 @@ public class DistroConsistencyServiceImpl implements ConsistencyService, DistroD
     @Override
     public byte[] getDistroData(String key) {
         Map<String, List<Instance>> result = new HashMap<>(1);
-        result.put(key, (List<Instance>) dataStore.get(key));
+        result.put(key, dataStore.get(key));
         return JsonUtils.toJsonByte(result);
     }
 

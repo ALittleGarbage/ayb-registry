@@ -3,12 +3,12 @@ package com.ayb.registry.server.core;
 import com.ayb.registry.common.core.Instance;
 import com.ayb.registry.server.consistency.ConsistencyService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -30,6 +30,8 @@ public class ServiceManager implements RecordListener<Service> {
     @Autowired
     private ConsistencyService consistencyService;
 
+    private final Object putServiceLock = new Object();
+
     /**
      * 将此ServiceManager添加监听
      */
@@ -45,13 +47,17 @@ public class ServiceManager implements RecordListener<Service> {
      * @param serviceName
      */
     public void initEmptyService(String namespaceId, String serviceName) {
-        Service service = getService(namespaceId, serviceName);
-        if (service == null) {
-            service = new Service();
-            service.setNamespaceId(namespaceId);
-            service.setName(serviceName);
+        if (!containService(namespaceId, serviceName)) {
+            synchronized (putServiceLock) {
+                if (containService(namespaceId, serviceName)) {
+                    return;
+                }
+                Service service = new Service();
+                service.setNamespaceId(namespaceId);
+                service.setName(serviceName);
 
-            setAndInitService(service);
+                setAndInitService(service);
+            }
         }
     }
 
@@ -80,9 +86,11 @@ public class ServiceManager implements RecordListener<Service> {
         String key = instance.getNamespaceId() + "##" + instance.getServiceName();
 
         synchronized (service) {
-            List<Instance> instances = service.getAllIp();
-            instances.remove(instance);
-            consistencyService.put(key, instances);
+            Set<Instance> instanceSet = getInstanceSet(key, service, instance);
+
+            instanceSet.remove(instance);
+
+            consistencyService.put(key, new ArrayList<>(instanceSet));
         }
     }
 
@@ -135,11 +143,36 @@ public class ServiceManager implements RecordListener<Service> {
         Service service = getService(instance.getNamespaceId(), instance.getServiceName());
 
         synchronized (service) {
-            List<Instance> allIp = service.getAllIp();
-            // 添加新服务实例
-            allIp.add(instance);
-            consistencyService.put(key, allIp);
+            Set<Instance> instanceSet = getInstanceSet(key, service, instance);
+
+            instanceSet.add(instance);
+
+            consistencyService.put(key, new ArrayList<>(instanceSet));
         }
+    }
+
+    private Set<Instance> getInstanceSet(String key, Service service, Instance instance) {
+        List<Instance> instances = consistencyService.get(key);
+        if(CollectionUtils.isEmpty(instances)) {
+            return new HashSet<>();
+        }
+
+        List<Instance> allIp = service.getAllIp();
+        Map<String, Instance> ipMap = new HashMap<>(allIp.size());
+        for (Instance ip : allIp) {
+            ipMap.put(ip.address(), ip);
+        }
+
+        Set<Instance> instanceSet = new HashSet<>(instances.size());
+        for (Instance in : instances) {
+            Instance ip = ipMap.get(instance.address());
+            if (ip != null) {
+                in.setHealthy(ip.getHealthy());
+                in.setLastBeat(ip.getLastBeat());
+            }
+            instanceSet.add(in);
+        }
+        return instanceSet;
     }
 
     @Override

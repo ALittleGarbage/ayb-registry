@@ -53,10 +53,11 @@ public class DistroMapper implements ApplicationListener<ServerMembersChangeEven
     public boolean responsible(String serviceName) {
         final List<String> servers = healthyList;
 
-        if (SpringUtils.getStandaloneMode()) {
+        if (SpringUtils.isStandaloneMode()) {
             return true;
         }
 
+        // 为空，说明没有准备好
         if (CollectionUtils.isEmpty(servers)) {
             return false;
         }

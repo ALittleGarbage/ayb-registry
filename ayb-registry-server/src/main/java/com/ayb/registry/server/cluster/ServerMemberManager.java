@@ -44,7 +44,7 @@ public class ServerMemberManager implements ApplicationListener<WebServerInitial
         this.serverMap = new ConcurrentSkipListMap<>();
         initSelf();
 
-        if (!SpringUtils.getStandaloneMode()) {
+        if (!SpringUtils.isStandaloneMode()) {
             MemoryServerMemberLookup lookup = new MemoryServerMemberLookup(this);
             lookup.start();
         }
@@ -83,7 +83,7 @@ public class ServerMemberManager implements ApplicationListener<WebServerInitial
     @Override
     public void onApplicationEvent(WebServerInitializedEvent event) {
         getSelf().setState(NodeState.UP);
-        if (!SpringUtils.getStandaloneMode()) {
+        if (!SpringUtils.isStandaloneMode()) {
             ServerMemberReportTask reportTask = new ServerMemberReportTask(this);
             GlobalExecutor.scheduleClusterBeatTask(reportTask);
         }

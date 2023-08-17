@@ -26,4 +26,11 @@ public interface ConsistencyService {
      * @param listener
      */
     void listen(String key, RecordListener<?> listener);
+
+    /**
+     * 获取实例信息
+     * @param key
+     * @return
+     */
+    List<Instance> get(String key);
 }

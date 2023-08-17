@@ -46,7 +46,7 @@ public class DistroProtocol {
         distroSyncDataTask = new DistroSyncDataTask(distroDataStorage);
         GlobalExecutor.scheduleClusterSyncData(distroSyncDataTask);
 
-        if (SpringUtils.getStandaloneMode()) {
+        if (SpringUtils.isStandaloneMode()) {
             this.isInitialized = true;
             return;
         }
